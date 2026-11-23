@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<phpunit bootstrap="tests/bootstrap.php" colors="true" failOnWarning="true" failOnRisky="true">
-  <testsuites><testsuite name="all"><directory>tests</directory></testsuite></testsuites>
-  <php>
-    <env name="TEST_DB_DSN" value="mysql:host=127.0.0.1;port=3306;dbname=fleet_test;charset=utf8mb4"/>
-    <env name="TEST_DB_USER" value="fleet"/>
-    <env name="TEST_DB_PASS" value="fleet"/>
-  </php>
-</phpunit>

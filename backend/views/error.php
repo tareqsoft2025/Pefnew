@@ -1,2 +1,0 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>خطأ <?= (int)$status ?></title><link rel="stylesheet" href="/assets/css/app.css"></head>
-<body><div class="login"><div class="card"><h1>تعذر إكمال الطلب (<?= (int)$status ?>)</h1><p><?= e($message) ?></p><a class="btn" href="/">العودة للرئيسية</a></div></div></body></html>

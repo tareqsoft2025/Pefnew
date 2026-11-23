@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">سائق الحركة</string>
-    <string name="channel_tracking">التتبع الميداني</string>
-    <string name="channel_alerts">التنبيهات</string>
-    <string name="tracking_title">التتبع نشط</string>
-    <string name="tracking_text">يُسجَّل موقعك لمهمة جارية. يتوقف تلقائيًا بعد انتهاء كل المهام.</string>
-</resources>
