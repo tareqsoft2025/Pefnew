@@ -165,4 +165,20 @@ final class TrackingTest extends TestCase
         (new CronService($this->app))->run();
         $this->assertSame(0, (int)self::$db->val('SELECT COUNT(*) FROM gps_points'));
     }
+
+    public function testStopExplainByDeviceTimeAndPendingList(): void
+    {
+        [, , , , $tok] = $this->startedTrip();
+        $pts = []; for ($i = 0; $i < 8; $i++) { $pts[] = $this->pt("s$i", $i * 60, 24.7, 46.7, 10, 0); }
+        Clock::advance(1000);
+        $this->api('POST', '/api/v1/gps/batch', ['client_trip_id' => 'T', 'points' => $pts], $tok);
+        $pending = $this->api('GET', '/api/v1/trips/current/pending', [], $tok)['json'];
+        $this->assertCount(1, $pending['stops']);
+        $r = $this->sync($tok, [$this->ev('stop.explain', ['started_at' => gmdate('c', self::T0 + 10), 'reason' => 'rest'])]);
+        $this->assertSame('applied', $r['results'][0]['status']);
+        $this->assertCount(0, $this->api('GET', '/api/v1/trips/current/pending', [], $tok)['json']['stops']);
+        // توقف لم يصل بعد ⇒ retry لا رفض نهائي
+        $r = $this->sync($tok, [$this->ev('stop.explain', ['started_at' => gmdate('c', self::T0 - 99999), 'reason' => 'rest'])]);
+        $this->assertSame('retry', $r['results'][0]['status']);
+    }
 }

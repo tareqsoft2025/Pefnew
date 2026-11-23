@@ -206,6 +206,17 @@ final class TripService
         }
     }
 
+    /** يحل التوقف بالمعرف، أو بوقت بدايته على الجهاز (للتفسير دون اتصال قبل معرفة معرف الخادم). */
+    public function resolveStopId(int $driverId, ?int $stopId, ?int $startedAt): int
+    {
+        if ($stopId) { return $stopId; }
+        if (!$startedAt) { throw new ApiException(422, 'validation_failed', 'stop_id أو started_at مطلوب'); }
+        $row = $this->db->one('SELECT s.id FROM trip_stops s JOIN trips t ON t.id=s.trip_id WHERE t.driver_id=? AND s.started_at <= ? AND (s.ended_at IS NULL OR s.ended_at >= ?) ORDER BY ABS(TIMESTAMPDIFF(SECOND, s.started_at, ?)) LIMIT 1',
+            [$driverId, Clock::fmt($startedAt + 120), Clock::fmt($startedAt - 120), Clock::fmt($startedAt)]);
+        if (!$row) { throw new ApiException(404, 'owner_not_found', 'لم يصل التوقف للخادم بعد؛ سيُعاد الإرسال'); }
+        return (int)$row['id'];
+    }
+
     public function explainStop(int $driverId, int $stopId, string $reasonCode, ?string $notes, string $clientEventId, ?int $at): array
     {
         $stop = $this->db->one('SELECT s.*, t.driver_id FROM trip_stops s JOIN trips t ON t.id=s.trip_id WHERE s.id=?', [$stopId]);
@@ -222,6 +233,17 @@ final class TripService
         $d = $this->db->one('SELECT v.*, t.driver_id FROM route_deviations v JOIN trips t ON t.id=v.trip_id WHERE v.id=?', [$devId]);
         if (!$d || (int)$d['driver_id'] !== $driverId) { throw new ApiException(404, 'not_found', 'الانحراف غير موجود'); }
         $this->db->update('route_deviations', ['reason' => mb_substr($reason, 0, 500), 'reason_at' => Clock::nowStr()], 'id=?', [$devId]);
+    }
+
+    /** توقفات وانحرافات الرحلة الحالية التي تنتظر تفسير السائق. */
+    public function pendingExplanations(int $driverId): array
+    {
+        $t = $this->db->one("SELECT id FROM trips WHERE driver_id=? AND status='active'", [$driverId]);
+        if (!$t) { return ['stops' => [], 'deviations' => []]; }
+        return [
+            'stops' => $this->db->all('SELECT s.id, s.started_at, s.ended_at, s.duration_s, s.status FROM trip_stops s WHERE s.trip_id=? AND NOT EXISTS (SELECT 1 FROM stop_explanations x WHERE x.stop_id=s.id) AND s.duration_s >= ? ORDER BY s.started_at DESC LIMIT 20', [$t['id'], $this->app->settings->int('stop.prompt_after_s')]),
+            'deviations' => $this->db->all('SELECT id, started_at, ended_at, max_distance_m, status FROM route_deviations WHERE trip_id=? AND reason IS NULL ORDER BY started_at DESC LIMIT 20', [$t['id']]),
+        ];
     }
 
     /** لقطة حالة الرحلة للتطبيق بعد المزامنة. */

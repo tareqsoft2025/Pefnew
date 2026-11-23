@@ -47,6 +47,7 @@ final class ApiController
             return Response::json($res + ['tracking_required' => (new TripService($this->app))->activeMissionCount($res['trip_id']) > 0, 'server_time' => Clock::nowStr()]);
         }, $d);
         $r->get("$p/trips/current", fn($q) => Response::json(['trip' => (new TripService($this->app))->tripState((int)$q->attrs['driver']['id'])]), $d);
+        $r->get("$p/trips/current/pending", fn($q) => Response::json((new TripService($this->app))->pendingExplanations((int)$q->attrs['driver']['id'])), $d);
         $r->post("$p/attachments", fn($q) => $this->upload($q), $d);
         $r->get("$p/attachments/{id}/file", fn($q, $x) => $this->serveFile($q, (int)$x['id'], true), $d);
         $r->get("$p/notifications", function ($q) {

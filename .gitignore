@@ -18,3 +18,8 @@ android/app/build/
 *.apk
 *.aab
 .DS_Store
+
+**/build/
+.gradle/
+backend/.phpunit.result.cache
+*.log

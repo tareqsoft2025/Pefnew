@@ -80,7 +80,8 @@ final class SyncService
             case 'trip.close':
                 return (new OdometerService($this->app))->closeTrip($driverId, $p['client_trip_id'] ?? null, isset($p['end_odometer']) ? (float)$p['end_odometer'] : null, $ts('measured_at') ?? $at, $eid);
             case 'stop.explain':
-                return (new TripService($this->app))->explainStop($driverId, (int)($p['stop_id'] ?? 0), (string)($p['reason'] ?? ''), $p['notes'] ?? null, $eid, $at);
+                $trips = new TripService($this->app);
+                return $trips->explainStop($driverId, $trips->resolveStopId($driverId, isset($p['stop_id']) ? (int)$p['stop_id'] : null, isset($p['started_at']) ? Clock::parse((string)$p['started_at']) : null), (string)($p['reason'] ?? ''), $p['notes'] ?? null, $eid, $at);
             case 'deviation.explain':
                 (new TripService($this->app))->explainDeviation($driverId, (int)($p['deviation_id'] ?? 0), (string)($p['reason'] ?? '')); return [];
             case 'sos.create':
