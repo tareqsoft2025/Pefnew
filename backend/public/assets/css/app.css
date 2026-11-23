@@ -14,7 +14,7 @@ a{color:var(--navy3)}@media (prefers-color-scheme:dark){a{color:#8db4ff}}
 .side .grp{font-size:.75rem;color:#8fb0e0;padding:12px 12px 4px;letter-spacing:.02em}
 .top{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 .top h1{font-size:1.2rem;margin:0}.main{padding:20px 24px 60px;max-width:1500px}
-.menu-btn{display:none}
+.btn.menu-btn{display:none}
 .grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px}
 .card h2{font-size:1.02rem;margin:0 0 12px}
@@ -53,5 +53,5 @@ textarea{min-height:80px}
 .skel{background:linear-gradient(90deg,var(--line),transparent,var(--line));height:14px;border-radius:6px;animation:sk 1.2s infinite;background-size:200% 100%}@keyframes sk{from{background-position:200% 0}to{background-position:-200% 0}}
 .tl{list-style:none;margin:0;padding:0}.tl li{padding:8px 14px 8px 0;border-inline-start:2px solid var(--line);padding-inline-start:14px;margin-inline-start:6px;position:relative}
 .tl li::before{content:"";position:absolute;inset-inline-start:-6px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--navy3)}
-@media (max-width:900px){.app{grid-template-columns:1fr}.side{position:fixed;inset-block:0;inset-inline-start:0;width:260px;transform:translateX(100%);transition:.2s;z-index:20;height:100vh}[dir=rtl] .side{transform:translateX(100%)}[dir=ltr] .side{transform:translateX(-100%)}body.nav-open .side{transform:none}.menu-btn{display:inline-flex}.main{padding:14px 14px 50px}.split{grid-template-columns:1fr}.map{height:380px}.top{padding:10px 14px}}
+@media (max-width:900px){.app{grid-template-columns:1fr}.side{position:fixed;inset-block:0;inset-inline-start:0;width:260px;transform:translateX(100%);transition:.2s;z-index:20;height:100vh}[dir=rtl] .side{transform:translateX(100%)}[dir=ltr] .side{transform:translateX(-100%)}body.nav-open .side{transform:none}.btn.menu-btn{display:inline-flex}.main{padding:14px 14px 50px}.split{grid-template-columns:1fr}.map{height:380px}.top{padding:10px 14px}}
 @media print{.side,.top,.btn,form.noprint{display:none!important}.app{display:block}.card{box-shadow:none;border:0}}
