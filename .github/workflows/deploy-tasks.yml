@@ -1,0 +1,97 @@
+# نشر النظام على https://tarsof.top/Tasks (استضافة GlobeTier / tarsof.top)
+#
+# ما يلمسه فقط (ولا شيء غيره على الخادم):
+#   ~/tasks_app/            كود الخادم (خارج الويب)؛ لا يُستبدل .env ولا storage
+#   ~/tasks_data/           الصور والمرفقات (يُنشأ مرة واحدة ولا يُحذف منه شيء)
+#   ~/public_html/Tasks/    الملفات العامة فقط (index.php وassets و.htaccess)
+# لا يمس public_html خارج مجلد Tasks، ولا مشاريع ph/hrnew/pef، ولا أي قاعدة بيانات غير
+# القاعدة المذكورة في ~/tasks_app/.env (تُنشأ جديدة وفارغة لهذا النظام).
+#
+# المطلوب مرة واحدة: سر المستودع TASKS_SSH_KEY = مفتاح SSH خاص يقابله مفتاح عام مضاف في
+# لوحة الاستضافة ▸ Advanced ▸ Developer tools ▸ SSH key manager.
+name: Deploy Tasks (tarsof.top/Tasks)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-tasks
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: 170.101.108.81
+  SSH_PORT: "22"
+  SSH_USER: tarsof_t1
+  APP_DIR: tasks_app
+  DATA_DIR: tasks_data
+  WEB_DIR: public_html/Tasks
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secret
+        env:
+          KEY: ${{ secrets.TASKS_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "::error::السر TASKS_SSH_KEY غير مضبوط في إعدادات المستودع"; exit 1; fi
+
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: "8.3", extensions: "pdo_mysql, mbstring, zip" }
+
+      - run: composer install --no-dev --optimize-autoloader --no-interaction
+        working-directory: backend
+
+      - name: Prepare SSH
+        env:
+          KEY: ${{ secrets.TASKS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/tasks_key && chmod 600 ~/.ssh/tasks_key
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH=ssh -i $HOME/.ssh/tasks_key -p $SSH_PORT -o BatchMode=yes" >> "$GITHUB_ENV"
+
+      - name: Create folders (لا يحذف شيئًا)
+        run: |
+          $SSH "$SSH_USER@$SSH_HOST" 'set -e; cd ~; mkdir -p "'"$APP_DIR"'" "'"$WEB_DIR"'"; mkdir -p -m 750 "'"$DATA_DIR"'"'
+
+      - name: Upload app code (خارج الويب)
+        run: |
+          rsync -az --delete \
+            --exclude '/.env' --exclude '/storage/' --exclude '/tests/' --exclude '/phpunit.xml' \
+            -e "$SSH" backend/ "$SSH_USER@$SSH_HOST:$APP_DIR/"
+
+      - name: Upload public files to public_html/Tasks
+        run: |
+          mkdir -p /tmp/webroot
+          cp -a backend/public/. /tmp/webroot/
+          rm -f /tmp/webroot/router.php
+          # نقطة الدخول: تشغّل التطبيق الموجود خارج الويب
+          cat > /tmp/webroot/index.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          require dirname(__DIR__, 2) . '/tasks_app/public/index.php';
+          PHP
+          case "$WEB_DIR" in */Tasks) ;; *) echo "::error::مسار الويب غير متوقع"; exit 1;; esac
+          rsync -az --delete -e "$SSH" /tmp/webroot/ "$SSH_USER@$SSH_HOST:$WEB_DIR/"
+
+      - name: Migrations (فقط إن وُجد ‎.env للنظام الجديد)
+        run: |
+          $SSH "$SSH_USER@$SSH_HOST" 'set -e; cd ~/'"$APP_DIR"'
+            if [ ! -f .env ]; then
+              echo "::warning::لا يوجد ~/'"$APP_DIR"'/.env بعد — تم رفع الملفات دون تشغيل migrations. أنشئ .env ثم أعد التشغيل."
+              exit 0
+            fi
+            php bin/migrate.php'
+
+      - name: Smoke test
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://tarsof.top/Tasks/api/v1/config || true)
+          echo "GET /Tasks/api/v1/config => $code (المتوقع 401 بدون رمز)"
