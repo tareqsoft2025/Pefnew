@@ -2,7 +2,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="app-base" content="<?= e(\App\Http\BasePath::get()) ?>">
 <title><?= e($title ?? 'إدارة الحركة') ?> — إدارة الحركة والمهام الميدانية</title>
 <link rel="stylesheet" href="/assets/css/app.css">
 <?php if (!empty($map)): ?><link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css"><?php endif; ?>

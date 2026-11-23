@@ -1,5 +1,6 @@
 /* خرائط الإدارة: Leaflet مستضاف محليًا. لا يُعرض موقع قديم كمباشر. */
 window.FleetMap={
+  base:(function(){var m=document.querySelector('meta[name="app-base"]');return m?m.getAttribute('content'):''})(),
   init:function(id,tileUrl){var m=L.map(id,{zoomControl:true}).setView([24.7136,46.6753],6);
     L.tileLayer(tileUrl||'https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);return m},
   ago:function(s){if(s==null)return 'غير معروف';if(s<60)return 'قبل '+s+' ث';if(s<3600)return 'قبل '+Math.floor(s/60)+' د';return 'قبل '+Math.floor(s/3600)+' س'},
@@ -16,7 +17,7 @@ window.FleetMap={
         seen[v.trip_id]=1;
         var label=(v.is_live?'مباشر':'آخر موقع معروف')+' · '+FleetMap.ago(v.position_age_s);
         if(v.lat!=null){
-          var html='<b>'+FleetMap.esc(v.driver_name)+'</b><br>'+(v.vehicle?FleetMap.esc(v.vehicle.plate_no)+'<br>':'')+label+'<br><a href="/trips/'+v.trip_id+'">سجل الرحلة</a>';
+          var html='<b>'+FleetMap.esc(v.driver_name)+'</b><br>'+(v.vehicle?FleetMap.esc(v.vehicle.plate_no)+'<br>':'')+label+'<br><a href="'+FleetMap.base+'/trips/'+v.trip_id+'">سجل الرحلة</a>';
           if(markers[v.trip_id]){markers[v.trip_id].setLatLng([v.lat,v.lon]).setIcon(icon(v)).setPopupContent(html)}
           else markers[v.trip_id]=L.marker([v.lat,v.lon],{icon:icon(v)}).addTo(map).bindPopup(html);
         }
@@ -29,7 +30,7 @@ window.FleetMap={
       Object.keys(markers).forEach(function(k){if(!seen[k]){map.removeLayer(markers[k]);delete markers[k]}});
       if(!fitted&&data.some(function(v){return v.lat!=null})){map.fitBounds(data.filter(function(v){return v.lat!=null}).map(function(v){return [v.lat,v.lon]}),{maxZoom:14,padding:[30,30]});fitted=true}
     }
-    function tick(){fetch('/api/v1/admin/live',{credentials:'same-origin'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){render(j.data);document.getElementById('live-status').textContent='آخر تحديث للصفحة: '+new Date().toLocaleTimeString('ar')}).catch(function(){document.getElementById('live-status').textContent='تعذر التحديث — البيانات المعروضة قد تكون قديمة'})}
+    function tick(){fetch(FleetMap.base+'/api/v1/admin/live',{credentials:'same-origin'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){render(j.data);document.getElementById('live-status').textContent='آخر تحديث للصفحة: '+new Date().toLocaleTimeString('ar')}).catch(function(){document.getElementById('live-status').textContent='تعذر التحديث — البيانات المعروضة قد تكون قديمة'})}
     tick();return setInterval(tick,10000);
   },
   track:function(map,t){

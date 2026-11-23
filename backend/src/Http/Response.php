@@ -26,14 +26,24 @@ final class Response
         return new self(200, $data, ['Content-Type' => $mime, 'Content-Disposition' => 'attachment; filename="' . rawurlencode($name) . '"', 'Cache-Control' => 'private, no-store']);
     }
 
+    /** نسخة بروابط مُعدّلة للمسار الفرعي (APP_BASE_PATH)؛ مطابقة للأصل عند التشغيل من جذر النطاق. */
+    public function prepared(): self
+    {
+        if (BasePath::get() === '') { return $this; }
+        $r = clone $this;
+        if (isset($r->headers['Location'])) { $r->headers['Location'] = BasePath::url($r->headers['Location']); }
+        if ($r->file === null && str_starts_with($r->headers['Content-Type'] ?? '', 'text/html')) { $r->body = BasePath::rewriteHtml($r->body); }
+        return $r;
+    }
+
     public function send(): void
     {
         http_response_code($this->status);
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         header('Referrer-Policy: same-origin');
-        foreach ($this->headers as $k => $v) { header("$k: $v"); }
+        foreach ($this->prepared()->headers as $k => $v) { header("$k: $v"); }
         if ($this->file !== null) { readfile($this->file); return; }
-        echo $this->body;
+        echo $this->prepared()->body;
     }
 }

@@ -14,8 +14,7 @@ final class Request
     public static function fromGlobals(): self
     {
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
-        if ($base !== '' && str_starts_with($path, $base)) { $path = substr($path, strlen($base)) ?: '/'; }
+        $path = BasePath::strip($path);
         $headers = [];
         foreach ($_SERVER as $k => $v) {
             if (str_starts_with($k, 'HTTP_')) { $headers[strtolower(str_replace('_', '-', substr($k, 5)))] = $v; }

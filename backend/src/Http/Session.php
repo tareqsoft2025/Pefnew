@@ -14,7 +14,7 @@ final class Session
         if (session_status() !== PHP_SESSION_ACTIVE) {
             $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
             session_name('fleet_sid');
-            session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
+            session_set_cookie_params(['lifetime' => 0, 'path' => BasePath::get() === '' ? '/' : BasePath::get() . '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
             session_start();
         }
         $s->data = &$_SESSION;
