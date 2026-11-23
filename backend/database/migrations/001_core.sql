@@ -100,7 +100,7 @@ CREATE TABLE audit_logs (
   action VARCHAR(96) NOT NULL,
   entity_type VARCHAR(64) NULL,
   entity_id VARCHAR(64) NULL,
-  details JSON NULL,
+  details MEDIUMTEXT NULL,   -- نص لا JSON: MySQL 8 يعيد تنسيق JSON فتنكسر سلسلة التجزئة
   ip VARCHAR(64) NULL,
   created_at DATETIME NOT NULL,
   prev_hash CHAR(64) NOT NULL,

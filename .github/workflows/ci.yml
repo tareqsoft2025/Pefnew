@@ -99,7 +99,7 @@ jobs:
           fetch-depth: 0
       - name: Gitleaks
         run: |
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 detect --source /repo --no-banner --redact --verbose
+          docker run --rm -v "$PWD:/repo" --entrypoint sh zricethezav/gitleaks:v8.21.2 -c "git config --global --add safe.directory /repo && gitleaks detect --source /repo --no-banner --redact --verbose"
       - name: Forbidden files
         run: |
           if git ls-files | grep -E '(^|/)(\.env|google-services\.json|.*\.(jks|keystore))$|service-account.*\.json$'; then
