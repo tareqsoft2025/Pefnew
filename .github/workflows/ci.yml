@@ -39,7 +39,7 @@ jobs:
           extensions: pdo_mysql, mbstring, zip, fileinfo, sodium
           coverage: none
       - name: Cache Composer
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('backend/composer.lock') }}
