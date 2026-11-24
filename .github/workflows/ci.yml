@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: PHP lint + tests (MySQL)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fleet_test
+          MYSQL_USER: fleet
+          MYSQL_PASSWORD: fleet
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo_mysql, mbstring, zip, fileinfo, sodium
+          coverage: none
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-
+      - run: composer install --no-interaction --prefer-dist
+      - name: Lint
+        run: composer lint
+      - name: PHPUnit (unit + DB integration + permissions + API)
+        env:
+          TEST_DB_DSN: mysql:host=127.0.0.1;port=3306;dbname=fleet_test;charset=utf8mb4
+          TEST_DB_USER: fleet
+          TEST_DB_PASS: fleet
+        run: vendor/bin/phpunit --testdox
+      - name: Composer audit (dependencies)
+        run: composer audit --no-interaction
+
+  android:
+    name: Android build + tests + debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Core (JVM) unit tests
+        working-directory: android
+        run: ./gradlew :core:test --no-daemon
+      - name: Build debug APK
+        working-directory: android
+        env:
+          FLEET_DEFAULT_SERVER_URL: ${{ vars.FLEET_DEFAULT_SERVER_URL }}
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fleet-driver-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-reports
+          path: |
+            android/**/build/reports
+            android/**/build/test-results
+
+  secrets-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" --entrypoint sh zricethezav/gitleaks:v8.21.2 -c "git config --global --add safe.directory /repo && gitleaks detect --source /repo --no-banner --redact --verbose"
+      - name: Forbidden files
+        run: |
+          if git ls-files | grep -E '(^|/)(\.env|google-services\.json|.*\.(jks|keystore))$|service-account.*\.json$'; then
+            echo "ملفات حساسة ممنوعة في المستودع"; exit 1; fi
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        continue-on-error: true   # يتطلب تفعيل Dependency graph في إعدادات المستودع
